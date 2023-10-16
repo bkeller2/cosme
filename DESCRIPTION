@@ -1,0 +1,25 @@
+Package: cosme
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Authors@R: person("Brian T.", "Keller", email = "btkeller@missouri.edu",
+  role = c("aut", "cre", "cph"))
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
+URL: https://github.com/bkeller2/cosme
+BugReports: https://github.com/bkeller2/cosme/issues
+Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.0.0)
+Imports:
+    cli,
+    lavaan (>= 0.6-3),
+    blavaan,
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
