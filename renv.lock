@@ -242,6 +242,17 @@
       ],
       "Hash": "1216ac65ac55ec0058a6f75d7ca0fd52"
     },
+    "clusterGeneration": {
+      "Package": "clusterGeneration",
+      "Version": "1.3.8",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "MASS",
+        "R"
+      ],
+      "Hash": "62df4b1fe7abefcf921dd7e52a801a6b"
+    },
     "coda": {
       "Package": "coda",
       "Version": "0.19-4",
@@ -343,6 +354,13 @@
         "vctrs"
       ],
       "Hash": "fedd9d00c2944ff00a0e2696ccf048ec"
+    },
+    "effsize": {
+      "Package": "effsize",
+      "Version": "0.8.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "8d00cc615bfe85d56071542db9d94db9"
     },
     "fansi": {
       "Package": "fansi",
@@ -626,6 +644,16 @@
         "R"
       ],
       "Hash": "33a3ca9e732b57244d14f5d732ffc9eb"
+    },
+    "matrixcalc": {
+      "Package": "matrixcalc",
+      "Version": "1.0-6",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "d2ef06fb3e84b679a20de1fc2204b63f"
     },
     "mgcv": {
       "Package": "mgcv",

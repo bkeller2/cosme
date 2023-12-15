@@ -1,5 +1,9 @@
 # Functions for generation of random correlation matrices
+# Taken from ockhamSEM (https://github.com/falkcarl/ockhamSEM)
 
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 mcmc.args.default <- function(nchains, d, args = NULL) {
     control <- list(
         iter = 5000000, # total number of iterations to run
@@ -17,6 +21,9 @@ mcmc.args.default <- function(nchains, d, args = NULL) {
     return(control)
 }
 
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 mcmc.jump.defaults <- function(o) {
     if (o == 3) {
         jmpsize <- .56
@@ -47,6 +54,9 @@ mcmc.jump.defaults <- function(o) {
     return(jmpsize)
 }
 
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 onion.args.default <- function(d, args = NULL) {
     control <- list(
         dim = d, # dimension of covariance matrix
@@ -61,6 +71,9 @@ onion.args.default <- function(d, args = NULL) {
     return(control)
 }
 
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 clustergen.args.default <- function(d, args = NULL) {
     control <- list(
         dim = d # dimension of covariance matrix
@@ -72,6 +85,9 @@ clustergen.args.default <- function(d, args = NULL) {
     return(control)
 }
 
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 #' @importFrom stats runif rnorm
 mcmc <- function(nmat, dim, iter, jmpsize, reject = NULL, onlypos = NULL) {
     iter_init <- iter
@@ -141,6 +157,9 @@ mcmc <- function(nmat, dim, iter, jmpsize, reject = NULL, onlypos = NULL) {
 # Helper function that generates random matrices
 #' @importFrom matrixcalc is.positive.definite is.symmetric.matrix
 #' @importFrom clusterGeneration genPositiveDefMat
+#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+#' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+#' @noRd
 genmat <- function(nmat = 1, rmethod = c("mcmc", "onion", "clustergen"), control, onlypos = FALSE) {
     rmethod <- match.arg(rmethod)
 
@@ -168,5 +187,7 @@ genmat <- function(nmat = 1, rmethod = c("mcmc", "onion", "clustergen"), control
             r.mat <- cbind(r.mat, as.vector(r))
         }
     }
-    return(r.mat)
+    # Return matrix
+    # Brian T. Keller
+    matrix(r.mat, control$dim, control$dim)
 }
