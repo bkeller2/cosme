@@ -2,14 +2,16 @@
 #' @noRd
 make_model <- function(model) {
 
-    # Flatten to a list
+    # Flatten to a single list
     if (is.list(model)) {
-        model <- rapply(model, paste0, collapse ='; ')
+        model <- rapply(model, paste0, collapse ='\n')
     }
     # Make sure it is a character vector
     if (!is.character(model)) throw_error(
         "The {.arg model} must be a character string."
     )
+    # Collapse
+    model <- paste0(model, collapse ='\n')
 
     # Return object
     structure(model, class = "cosme_model")
