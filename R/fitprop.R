@@ -302,184 +302,184 @@ run.fitprop <- function(...,
     ), class = "fitprop")
 }
 
-#' #' Plot function for fitprop objects
-#' #' @param x Object of class fitprop, as created by run.fitprop function.
-#' #' @param ... Does nothing but to hopefully make this generic function pass R CMD check
-#' #' @param type What type of plot to produce? Options include \code{"ecdf"} or \code{"euler"}. \code{"nVennR"}
-#' #'   is not yet operational.
-#' #' @param whichmod Index number corresponding to which model(s) to include on the plot. Defaults to all models.
-#' #' @param whichfit Character vector indicating which indices of model fit to include. Defaults to all saved indices.
-#' #' @param savePlot Logical value indicating whether to save plot to a list (TRUE) or just produce plot to output.
-#' #' @param xlim Numeric vector of length 2 indicating the limits for the x-axis of the plot.
-#' #' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
-#' #' @param cutoff Numeric vector indicating what cut value of the fit indice(s) to use for euler plots.
-#' #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
-#' #' @param mod.lab Optional character vector of labels for each model.
-#' #' @param mod.brewer.pal Optional string corresponding to the palette from RColorBrewer to use for the different models. e.g.,
-#' #'   see \code{\link[RColorBrewer]{display.brewer.all}}.
-#' #' @examples
-#' #' \donttest{
-#' #'
-#' #' library(ggplot2)
-#' #' # Set up a covariance matrix to fit models to
-#' #' p <- 3 # number of variables
-#' #' temp_mat <- diag(p) # identity matrix
-#' #' colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
-#' #'
-#' #' # Define and fit two models using lavaan package
-#' #' mod1a <- "V3 ~ V1 + V2
-#' #'   V1 ~~ 0*V2"
-#' #' mod2a <- "V3 ~ V1
-#' #'   V2 ~ V3"
-#' #'
-#' #' mod1a.fit <- sem(mod1a, sample.cov = temp_mat, sample.nobs = 500)
-#' #' mod2a.fit <- sem(mod2a, sample.cov = temp_mat, sample.nobs = 500)
-#' #'
-#' #' # Run fit propensity analysis
-#' #' # Onion approach, save srmr and CFI
-#' #' res <- run.fitprop(mod1a.fit, mod2a.fit,
-#' #'     fit.measure = c("srmr", "cfi"),
-#' #'     rmethod = "onion", reps = 1000
-#' #' )
-#' #' summary(res)
-#' #'
-#' #' # Generate a variety of plots
-#' #' # ecdf - only srmr
-#' #' plot(res, whichfit = "srmr")
-#' #'
-#' #' # ecdf - both srmr and cfi, properly indicating that higher values of cfi are better
-#' #' plot(res, lower.tail = c(TRUE, FALSE))
-#' #'
-#' #' # ecdf change color palette, save plot to object, then display or change
-#' #' myplot <- plot(res,
-#' #'     whichfit = "cfi",
-#' #'     lower.tail = FALSE,
-#' #'     mod.brewer.pal = "Dark2",
-#' #'     savePlot = TRUE
-#' #' )
-#' #' myplot[[1]] # saved to the first slot
-#' #' myplot[[1]] + theme_bw() # change something, like the theme
-#' #'
-#' #' # euler plot
-#' #' # cfi - which models have cfi of .5 or better?
-#' #' plot(res, type = "euler", whichfit = "cfi", lower.tail = FALSE, cutoff = .5)
-#' #' }
-#' #' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
-#' #' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
-#' #' @noRd
-#' #' @import ggplot2
-#' #' @importFrom graphics plot
-#' #' @importFrom stats na.omit
-#' #' @importFrom tidyr gather
-#' #' @importFrom eulerr euler
-#' #' @importFrom rlang .data
-#' plot.fitprop <- function(x, ..., type = c("ecdf", "euler", "nVennR"), whichmod = NULL, whichfit = colnames(x$fit_list[[1]]), savePlot = FALSE,
-#'                          xlim = c(0, 1), samereps = TRUE, cutoff = rep(.1, length(whichfit)), lower.tail = rep(TRUE, length(whichfit)),
-#'                          mod.lab = NULL, mod.brewer.pal = "Set1") {
-#'     type <- match.arg(type)
-#'
-#'     data <- x$fit_list
-#'     nmod <- length(data) # number of models
-#'     nfit <- ncol(data[[1]]) # number of fit measures
-#'     nrep <- nrow(data[[1]]) # number of available replications
-#'
-#'     if (is.null(whichfit)) {
-#'         whichfit <- colnames(data[[1]])
-#'     }
-#'     if (is.null(whichmod)) {
-#'         whichmod <- 1:nmod
-#'     }
-#'     if (is.null(mod.lab)) {
-#'         mod.lab <- paste0("Model ", whichmod)
-#'     }
-#'
-#'     plots <- list()
-#'     # loop over fit indices
-#'     m <- 1
-#'     for (fm in whichfit) {
-#'         # extract and format data
-#'         dat <- matrix(nrow = nrep, ncol = nmod)
-#'         j <- 1
-#'         for (mod in 1:nmod) {
-#'             dat[, j] <- data[[mod]][, fm]
-#'             j <- j + 1
-#'         }
-#'         dat <- as.data.frame(dat)
-#'         colnames(dat) <- mod.lab
-#'         dat$id <- 1:nrow(dat)
-#'
-#'         # generate plots
-#'         if (type == "ecdf") {
-#'             if (samereps) {
-#'                 dat <- na.omit(dat)
-#'             }
-#'             dat <- gather(dat, "variable", "value", whichmod)
-#'             graph <- ggplot(dat, aes(x = .data$value)) +
-#'                 stat_ecdf(aes(linetype = .data$variable, color = .data$variable), na.rm = TRUE, size = .7) +
-#'                 scale_color_brewer(palette = mod.brewer.pal)
-#'
-#'             graph <- graph + guides(color = guide_legend(title = "Model"))
-#'             graph <- graph + guides(linetype = guide_legend(title = "Model"))
-#'
-#'             if (lower.tail[m]) {
-#'                 graph <- graph + xlim(xlim[1], xlim[2])
-#'             } else {
-#'                 graph <- graph + xlim(xlim[2], xlim[1])
-#'             }
-#'             graph <- graph + xlab(fm) + ylab("Cumulative Probability") # theme(legend.title=element_blank())+
-#'         } else if (type == "euler") {
-#'             if (lower.tail[m]) {
-#'                 dat[, whichmod] <- dat[, whichmod] < cutoff # how many meet cutoff criterion
-#'             } else {
-#'                 dat[, whichmod] <- dat[, whichmod] > cutoff # how many meet cutoff criterion
-#'             }
-#'             tmp <- cbind(data.frame(Total = rep(TRUE, nrow(dat))), dat[, whichmod])
-#'             if (samereps) {
-#'                 tmp <- na.omit(tmp)
-#'             }
-#'             colnames(tmp) <- c("Total", whichmod)
-#'             eulerfit <- euler(tmp)
-#'             graph <- plot(eulerfit)
-#'         } else if (type == "nVennR") {
-#'             stop("nVennR is not yet functional")
-#'
-#'             dat <- na.omit(dat)
-#'             tmp <- list()
-#'             indx <- 1
-#'             for (j in whichmod) {
-#'                 if (lower.tail[m]) {
-#'                     tmp[[indx]] <- dat$id[dat[, j] < cutoff]
-#'                 } else {
-#'                     tmp[[indx]] <- dat$id[dat[, j] > cutoff]
-#'                 }
-#'                 indx <- indx + 1
-#'             }
-#'             tmp[[indx]] <- dat$id # last group is the total
-#'             # tmp<-cbind(data.frame(Total=rep(TRUE,nrow(dat))),dat[,whichmod])
-#'             # if(samereps){
-#'             #  tmp<-na.omit(tmp)
-#'             # }
-#'             # colnames(tmp)<-c("Total",whichmod)
-#'             # eulerfit<-euler(tmp)
-#'             # graph<-plot(eulerfit)
-#'             # graph<-plotVenn(tmp,nCycles=5000,showPlot=F,sNames=c(mod.lab,"Total"))
-#'         }
-#'
-#'         # do something with plot
-#'         if (savePlot) {
-#'             plots[[m]] <- graph
-#'         } else {
-#'             if (m > 1) {
-#'                 invisible(readline(prompt = "Press [enter] to continue"))
-#'             }
-#'             print(graph)
-#'         }
-#'         m <- m + 1
-#'     }
-#'     if (savePlot) {
-#'         invisible(plots)
-#'     }
-#' }
+# #' Plot function for fitprop objects
+# #' @param x Object of class fitprop, as created by run.fitprop function.
+# #' @param ... Does nothing but to hopefully make this generic function pass R CMD check
+# #' @param type What type of plot to produce? Options include \code{"ecdf"} or \code{"euler"}. \code{"nVennR"}
+# #'   is not yet operational.
+# #' @param whichmod Index number corresponding to which model(s) to include on the plot. Defaults to all models.
+# #' @param whichfit Character vector indicating which indices of model fit to include. Defaults to all saved indices.
+# #' @param savePlot Logical value indicating whether to save plot to a list (TRUE) or just produce plot to output.
+# #' @param xlim Numeric vector of length 2 indicating the limits for the x-axis of the plot.
+# #' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
+# #' @param cutoff Numeric vector indicating what cut value of the fit indice(s) to use for euler plots.
+# #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
+# #' @param mod.lab Optional character vector of labels for each model.
+# #' @param mod.brewer.pal Optional string corresponding to the palette from RColorBrewer to use for the different models. e.g.,
+# #'   see \code{\link[RColorBrewer]{display.brewer.all}}.
+# #' @examples
+# #' \donttest{
+# #'
+# #' library(ggplot2)
+# #' # Set up a covariance matrix to fit models to
+# #' p <- 3 # number of variables
+# #' temp_mat <- diag(p) # identity matrix
+# #' colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+# #'
+# #' # Define and fit two models using lavaan package
+# #' mod1a <- "V3 ~ V1 + V2
+# #'   V1 ~~ 0*V2"
+# #' mod2a <- "V3 ~ V1
+# #'   V2 ~ V3"
+# #'
+# #' mod1a.fit <- sem(mod1a, sample.cov = temp_mat, sample.nobs = 500)
+# #' mod2a.fit <- sem(mod2a, sample.cov = temp_mat, sample.nobs = 500)
+# #'
+# #' # Run fit propensity analysis
+# #' # Onion approach, save srmr and CFI
+# #' res <- run.fitprop(mod1a.fit, mod2a.fit,
+# #'     fit.measure = c("srmr", "cfi"),
+# #'     rmethod = "onion", reps = 1000
+# #' )
+# #' summary(res)
+# #'
+# #' # Generate a variety of plots
+# #' # ecdf - only srmr
+# #' plot(res, whichfit = "srmr")
+# #'
+# #' # ecdf - both srmr and cfi, properly indicating that higher values of cfi are better
+# #' plot(res, lower.tail = c(TRUE, FALSE))
+# #'
+# #' # ecdf change color palette, save plot to object, then display or change
+# #' myplot <- plot(res,
+# #'     whichfit = "cfi",
+# #'     lower.tail = FALSE,
+# #'     mod.brewer.pal = "Dark2",
+# #'     savePlot = TRUE
+# #' )
+# #' myplot[[1]] # saved to the first slot
+# #' myplot[[1]] + theme_bw() # change something, like the theme
+# #'
+# #' # euler plot
+# #' # cfi - which models have cfi of .5 or better?
+# #' plot(res, type = "euler", whichfit = "cfi", lower.tail = FALSE, cutoff = .5)
+# #' }
+# #' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
+# #' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
+# #' @noRd
+# #' @import ggplot2
+# #' @importFrom graphics plot
+# #' @importFrom stats na.omit
+# #' @importFrom tidyr gather
+# #' @importFrom eulerr euler
+# #' @importFrom rlang .data
+# plot.fitprop <- function(x, ..., type = c("ecdf", "euler", "nVennR"), whichmod = NULL, whichfit = colnames(x$fit_list[[1]]), savePlot = FALSE,
+#                          xlim = c(0, 1), samereps = TRUE, cutoff = rep(.1, length(whichfit)), lower.tail = rep(TRUE, length(whichfit)),
+#                          mod.lab = NULL, mod.brewer.pal = "Set1") {
+#     type <- match.arg(type)
+#
+#     data <- x$fit_list
+#     nmod <- length(data) # number of models
+#     nfit <- ncol(data[[1]]) # number of fit measures
+#     nrep <- nrow(data[[1]]) # number of available replications
+#
+#     if (is.null(whichfit)) {
+#         whichfit <- colnames(data[[1]])
+#     }
+#     if (is.null(whichmod)) {
+#         whichmod <- 1:nmod
+#     }
+#     if (is.null(mod.lab)) {
+#         mod.lab <- paste0("Model ", whichmod)
+#     }
+#
+#     plots <- list()
+#     # loop over fit indices
+#     m <- 1
+#     for (fm in whichfit) {
+#         # extract and format data
+#         dat <- matrix(nrow = nrep, ncol = nmod)
+#         j <- 1
+#         for (mod in 1:nmod) {
+#             dat[, j] <- data[[mod]][, fm]
+#             j <- j + 1
+#         }
+#         dat <- as.data.frame(dat)
+#         colnames(dat) <- mod.lab
+#         dat$id <- 1:nrow(dat)
+#
+#         # generate plots
+#         if (type == "ecdf") {
+#             if (samereps) {
+#                 dat <- na.omit(dat)
+#             }
+#             dat <- gather(dat, "variable", "value", whichmod)
+#             graph <- ggplot(dat, aes(x = .data$value)) +
+#                 stat_ecdf(aes(linetype = .data$variable, color = .data$variable), na.rm = TRUE, size = .7) +
+#                 scale_color_brewer(palette = mod.brewer.pal)
+#
+#             graph <- graph + guides(color = guide_legend(title = "Model"))
+#             graph <- graph + guides(linetype = guide_legend(title = "Model"))
+#
+#             if (lower.tail[m]) {
+#                 graph <- graph + xlim(xlim[1], xlim[2])
+#             } else {
+#                 graph <- graph + xlim(xlim[2], xlim[1])
+#             }
+#             graph <- graph + xlab(fm) + ylab("Cumulative Probability") # theme(legend.title=element_blank())+
+#         } else if (type == "euler") {
+#             if (lower.tail[m]) {
+#                 dat[, whichmod] <- dat[, whichmod] < cutoff # how many meet cutoff criterion
+#             } else {
+#                 dat[, whichmod] <- dat[, whichmod] > cutoff # how many meet cutoff criterion
+#             }
+#             tmp <- cbind(data.frame(Total = rep(TRUE, nrow(dat))), dat[, whichmod])
+#             if (samereps) {
+#                 tmp <- na.omit(tmp)
+#             }
+#             colnames(tmp) <- c("Total", whichmod)
+#             eulerfit <- euler(tmp)
+#             graph <- plot(eulerfit)
+#         } else if (type == "nVennR") {
+#             stop("nVennR is not yet functional")
+#
+#             dat <- na.omit(dat)
+#             tmp <- list()
+#             indx <- 1
+#             for (j in whichmod) {
+#                 if (lower.tail[m]) {
+#                     tmp[[indx]] <- dat$id[dat[, j] < cutoff]
+#                 } else {
+#                     tmp[[indx]] <- dat$id[dat[, j] > cutoff]
+#                 }
+#                 indx <- indx + 1
+#             }
+#             tmp[[indx]] <- dat$id # last group is the total
+#             # tmp<-cbind(data.frame(Total=rep(TRUE,nrow(dat))),dat[,whichmod])
+#             # if(samereps){
+#             #  tmp<-na.omit(tmp)
+#             # }
+#             # colnames(tmp)<-c("Total",whichmod)
+#             # eulerfit<-euler(tmp)
+#             # graph<-plot(eulerfit)
+#             # graph<-plotVenn(tmp,nCycles=5000,showPlot=F,sNames=c(mod.lab,"Total"))
+#         }
+#
+#         # do something with plot
+#         if (savePlot) {
+#             plots[[m]] <- graph
+#         } else {
+#             if (m > 1) {
+#                 invisible(readline(prompt = "Press [enter] to continue"))
+#             }
+#             print(graph)
+#         }
+#         m <- m + 1
+#     }
+#     if (savePlot) {
+#         invisible(plots)
+#     }
+# }
 
 #' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
 #' @references Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
