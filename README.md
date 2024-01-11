@@ -13,23 +13,15 @@ This package is currently under development and has not been released yet.
 remotes::install_github('bkeller2/cosme')
 library(cosme)
 
-## Place holder to deal with model
-cosme_model <- function(model) {
-    # TODO check if constructed appropriately
-    
-    # Return object
-    structure(model, class = 'cosme_model')
-}
-
 ## Get data
 data(HolzingerSwineford1939, package = 'lavaan')
 HSdata <- HolzingerSwineford1939[,7:15]
 
 ## Create Model
-m <- cosme_model(
-    "visual  =~ x1 + x2 + x3
-    textual =~ x4 + x5 + x6
-    speed   =~ x7 + x8 + x9"
+m <- c(
+    "visual  =~ x1 + x2 + x3",
+    "textual =~ x4 + x5 + x6",
+    "speed   =~ x7 + x8 + x9"
 )
 
 # Set up multisession evaluation
