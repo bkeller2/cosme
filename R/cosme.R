@@ -10,12 +10,8 @@
 #' @export
 cosme <- function(model, data, ...) {
     # Check that it is a model
-    if (!is.model(model)) {
-        throw_error(c(
-            "The {.cls model} object is not properly constructed.",
-            "x" = "The object is not of class {.cls cosme_model}"
-        ))
-    }
+    if (!is.model(model)) model <- make_model(model)
+
     # Run three fits
     # future evaluation of freq and bayes only
     freq  <- future(fit_freq(model, data, ...))

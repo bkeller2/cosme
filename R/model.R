@@ -1,7 +1,15 @@
 #' Generate comse model base class
 #' @noRd
 make_model <- function(model) {
-    # TODO check if constructed appropriately
+
+    # Flatten to a list
+    if (is.list(model)) {
+        model <- rapply(model, paste0, collapse ='; ')
+    }
+    # Make sure it is a character vector
+    if (!is.character(model)) throw_error(
+        "The {.arg model} must be a character string."
+    )
 
     # Return object
     structure(model, class = "cosme_model")
