@@ -8,9 +8,10 @@ This package is currently under development and has not been released yet.
 
 ## Example script
 ```r
+## Install package from github
+# remotes::install_github('bkeller2/cosme')
 
-## Install and load package
-remotes::install_github('bkeller2/cosme')
+## Load Package
 library(cosme)
 
 ## Get data
@@ -24,14 +25,20 @@ m <- c(
     "speed   =~ x7 + x8 + x9"
 )
 
-# Set up multisession evaluation
-# Should speed up computations in general
-future::plan('multisession')
-
-# Runs 25 reps for testing with ockhamSEM
-## Additional functional inputs will be added for `cosme`
-## To set up models for each method
-o <- cosme(m, HSdata)
+# Runs 100 reps for Information Theory
+## Set max iterations to 50
+# Run
+o <- cosme(
+    m,
+    HSdata,
+    option = 
+        list(
+            info =  list(
+                reps = 100,
+                iter.max = 50
+            )
+        )
+)
 
 # There will be 3 slots in `o`
 # - `info`  information theory results

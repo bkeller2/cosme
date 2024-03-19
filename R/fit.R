@@ -34,10 +34,8 @@ fit_bayes <- function(model, data, ...) {
 #' @param ... passed to `lavaan::cfa`
 # TODO better description of ...
 #' @noRd
-#' @export
 fit_info <- function(model, data, reps, ...) {
     # TODO print warning with missing data
-    # TODO add way to control specifics
     # TODO deal with reps
     if (missing(reps)) reps <- 25
     tmpmat <- diag(NCOL(data))
@@ -46,9 +44,10 @@ fit_info <- function(model, data, reps, ...) {
     (model
         |> as.lavaan()
         |> cfa(sample.cov = tmpmat, sample.nobs = NROW(data))
-        |> run.fitprop(
-            fit.measure = "srmr", rmethod = "onion",
-            reps = reps, saveModel = TRUE, saveR = TRUE,
+        |> run_fitprop(
+            fit.measure =  c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr"),
+            rmethod = "onion",
+            reps = reps,
             ...
         )
     )

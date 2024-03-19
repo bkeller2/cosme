@@ -24,6 +24,7 @@ is.model <- function(x) {
 }
 
 # Convert `cosme_model` to character
+#' @noRd
 as.character.cosme_model <- function(x, ...) {
     as.character.default(x)
 }

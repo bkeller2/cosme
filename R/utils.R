@@ -37,3 +37,14 @@ modlist_summary <- function(object) {
     )
     return(out)
 }
+
+#' Internal function to produce baseline model
+#' @noRd
+baseline_model <- function(model) {
+    model |>
+        lav_partable_independence() |>
+        with({
+            c(paste(lhs, op, rhs), paste(lhs, '~ 1'))
+        }) |>
+        make_model()
+}

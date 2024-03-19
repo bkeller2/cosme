@@ -4,15 +4,18 @@
 \alias{cosme}
 \title{Fit cosme model}
 \usage{
-cosme(model, data, ...)
+cosme(model, data, option)
 }
 \arguments{
 \item{model}{a \code{cosme_model} object}
 
 \item{data}{a \code{data.frame}}
 
-\item{...}{passed onto other stuff}
+\item{option}{a \code{list} object with options passed to various methods. See details}
 }
 \description{
 A short description...
+}
+\details{
+Additional details...
 }

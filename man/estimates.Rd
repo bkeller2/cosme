@@ -4,7 +4,7 @@
 \alias{estimates}
 \title{Obtain Estimates from \code{comse_fit}}
 \usage{
-estimates(x)
+estimates(object)
 }
 \arguments{
 \item{object}{a \code{cosme_model} object}

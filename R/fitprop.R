@@ -4,7 +4,7 @@
 
 #' Run fit propensity analyses
 #'
-#' @param ... Models of class lavaan for which the user would like to compare fit propensity.
+#' @param model Models of class lavaan for which the user would like to compare fit propensity.
 #' @param fit.measure Character vector that indicates which fit measure to extract from fitted
 #'   models. Possible options include anything returned by \code{\link[lavaan]{fitMeasures}} from the lavaan
 #'   package when applied to fitted models.
@@ -15,14 +15,11 @@
 #'   are many variables, generation of correlation matrices and fitting models to them will be very, very
 #'   computationally intensive.
 #'   with positive manifold (\code{TRUE}); i.e., only positive relationships among variables.
-#' @param seed Random number seed used by set.seed or parallel package.
 #' @param mcmc.args Named list of arguments that controls options for
 #'   \code{"mcmc"} correlation matrix generation. See details.
 #' @param clustergen.args Named list of arguments that controls generation of
 #'   correlation matrices if \code{"onion"} or \code{"clustergen"} is used. See details.
-#' @param saveModel Logical value indicating whether the to save fitted models
-#'   for later examination.
-#' @param saveR Logical value indicating whether to save randomly generated correlation matrices.
+#' @param ... Passed to lavaan
 #' @details Inspired by work by Preacher (2003, 2006) and Bonifay & Cai (2017),
 #'   this function performs three steps for analyses to assess the fit propensity of competing
 #'   structural equation models: 1. Randomly generate correlation (or covariance matrices);
@@ -83,11 +80,10 @@
 #' @slot fit_list A list of the same length as the number of models being compared. Each list
 #'   contains a matrix with columns corresponding to each entry of \code{fit.measure} and for all replications.
 #' @slot R A list of the same length as the number of replications, containing all correlation
-#'   matrices that were used for the fit propensity analysis. This slot is only populated
-#'   if \code{SaveR} is set to \code{TRUE}.
+#'   matrices that were used for the fit propensity analysis.
 #' @slot mod_list A list of the same length as the number of models being compared. Each element
 #'   contains a list of the same length as the number of replications and contains fitted lavaan
-#'   models. Only populated if \code{saveModel} is set to \code{TRUE}.
+#'   models.
 #' @references
 #' Bonifay, W. E., & Cai, L. (2017). On the complexity of item response theory models. Multivariate Behavioral Research, 52(4), 465–484. \url{http://doi.org/10.1080/00273171.2017.1309262}
 #'
@@ -140,21 +136,20 @@
 #' @return An object of class fitprop for which plot and summary methods are available. Some slots are listed in the Slots section.
 #' @seealso \code{\link[ockhamSEM]{plot.fitprop}} \code{\link[ockhamSEM]{summary.fitprop}}
 #' @importFrom lavaan lavInspect lavNames parTable lavaan
-#' @importFrom future.apply future_lapply
-#' @import progressr cli
+#' @import cli
 #' @noRd
-run.fitprop <- function(...,
+run_fitprop <- function(model, ...,
                         fit.measure = "srmr",
                         rmethod = c("onion", "mcmc", "clustergen"),
                         reps = 1000,
                         onlypos = FALSE,
-                        seed = 1234,
                         mcmc.args = list(),
-                        clustergen.args = list(),
-                        saveModel = FALSE,
-                        saveR = FALSE) {
+                        clustergen.args = list()) {
     fun.call <- match.call()
-    models <- list(...)
+
+    if (class(model) == "lavaan") models <- list(model)
+    else stop("Input model must be a fitted lavaan model")
+
     n.models <- length(models)
 
     for (lavmodel in models) {
@@ -199,8 +194,7 @@ run.fitprop <- function(...,
         stop("Unrecognized control option") # TODO change to cli
     )
 
-    # Generate the matrices using future package
-    # Add progress bar with progressr
+    # Generate the matrices
     # Brian T. Keller
     out_mat <- lapply(
         seq_len(reps), genmat,
@@ -232,55 +226,61 @@ run.fitprop <- function(...,
     # Fit model to each matrix
     # Update using lapply, future, and clean up code
     # Brian T. Keller
-    cli::cli_inform("  Matrices Generated. Fitting Model to matrices.")
+    cli::cli_alert_success("Matrices Generated.")
+    cli::cli_alert('Fitting Models to Matrices.')
 
-    mod_list <- if (saveModel) vector("list", length(models)) else list()
+    mod_list <- vector("list", length(models))
     for (i in seq_along(models)) {
         lavmodel <- models[[i]]
-        with_progress({
-            p <- progressor(along = out_mat)
-            fit_tmp <- future.apply::future_lapply(
-                out_mat,
-                FUN = \(x, ...) {
-                    p(sprintf("x=%g", x))
-                    fit_mat(x, ...)
-                },
-                lavmodel = lavmodel,
-                vnames = vnames,
-                saveModel = saveModel,
-                fit.measure = fit.measure,
-                future.seed = FALSE
-            )
-        }, handlers = handler_cli(format = paste0(
-            "  Fitting {cli::pb_bar} {cli::pb_current}/{cli::pb_total} ",
-            "| Elapsed: {cli::pb_elapsed}",
-            "| ETA: {cli::pb_eta}"
-        ), show_after = 1, clear = F))
+        # with_progress({
+        #     p <- progressor(along = out_mat)
+        #     fit_tmp <- future.apply::future_lapply(
+        #         out_mat,
+        #         FUN = \(x, ...) {
+        #             p(sprintf("x=%g", x))
+        #             fit_mat(x, ...)
+        #         },
+        #         lavmodel = lavmodel,
+        #         vnames = vnames,
+        #         saveModel = TRUE,
+        #         fit.measure = fit.measure,
+        #         future.seed = FALSE
+        #     )
+        # }, handlers = handler_cli(format = paste0(
+        #     "  Fitting {cli::pb_bar} {cli::pb_current}/{cli::pb_total} ",
+        #     "| Elapsed: {cli::pb_elapsed}",
+        #     "| ETA: {cli::pb_eta}"
+        # ), show_after = F, clear = F))
 
-        # fit_tmp <- lapply(
-        #     cli::cli_progress_along(
-        #         seq_along(out_mat),
-        #         clear = FALSE,
-        #         format = paste0(
-        #             "  Simulating {cli::pb_bar} {cli::pb_current}/{cli::pb_total} ",
-        #             "| Elapsed: {cli::pb_elapsed}",
-        #             "| ETA: {cli::pb_eta}"
-        #         )
-        #     ),
-        #     FUN = \(x, ...) fit_mat(out_mat[[x]], ...),
-        #     lavmodel = lavmodel,
-        #     vnames = vnames,
-        #     saveModel = saveModel,
-        #     fit.measure = fit.measure
-        # )
+        fit_tmp <- lapply(
+            cli::cli_progress_along(
+                seq_along(out_mat),
+                clear = FALSE,
+                format = paste0(
+                    "  Fitting {cli::pb_bar} {cli::pb_current}/{cli::pb_total} ",
+                    "| Elapsed: {cli::pb_elapsed}",
+                    "| ETA: {cli::pb_eta}"
+                )
+            ),
+            FUN = \(x, ...) {
+                flush.console()
+                fit_mat(out_mat[[x]], ...)
+            },
+            lavmodel = lavmodel,
+            vnames = vnames,
+            saveModel = TRUE,
+            fit.measure = fit.measure
+        )
         fit_list[[i]] <- matrix(
             unlist(fit_tmp),
             ncol = length(fit.measure),
             byrow = TRUE
         )
         colnames(fit_list[[i]]) <- fit.measure
-        if (saveModel) mod_list[[i]] <- lapply(fit_tmp, attr, "mod")
+        mod_list[[i]] <- lapply(fit_tmp, attr, "mod")
     }
+    cli::cli_alert_success("Models fit to all matrices.")
+    flush.console()
 
     # Process number of missing values (if any) per model and fit index
     na_list <- lapply(fit_list, is.na)
@@ -297,8 +297,8 @@ run.fitprop <- function(...,
         na_list = na_list,
         complete_mat = complete_mat,
         fit_list = fit_list,
-        R = if (saveR) out_mat else NULL,
-        mod_list = if (saveModel) mod_list else NULL
+        R = out_mat,
+        mod_list = mod_list
     ), class = "fitprop")
 }
 
@@ -501,304 +501,4 @@ print.fitprop <- function(x, ...) {
         "  method =                ", x$rmethod, "\n",
         "  Only positive R?        ", x$onlypos, "\n"
     )
-}
-
-#' Summary function for fitprop objects
-#' @param object Object of class fitprop, as created by \code{\link[ockhamSEM]{run.fitprop}} function.
-#' @param ... Does nothing but to hopefully make this generic function pass R CMD check.
-#' @param probs Vector passed to quantile to determine what probabilities to report.
-#' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
-#' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
-#' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML; e.g., Rissanen, 2001). Requires
-#'   that `logl` is a saved fit index.
-#' @param UIF (experimental) Logical value indicating whether to compute uniform index of fit (UIF; Botha, Shapiro, Steiger, 1988).
-#'   Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
-#'   was better than fit function based on random data. Currently this option works for any fit index, but some may make sense more
-#'   than others. Also requires \code{lower.tail} is appropriately set.
-#' @references
-#' Botha, J.D., Shapiro, A., \& Steiger, J.H. (1988). Uniform indices-of-fit for factor analysis models. Multivariate Behavioral Research, 23(4), 443-450. \url{http://doi.org/10.1207/s15327906mbr2304_2}
-#'
-#' Rissanen, J. (2001). Strong optimality of the normalized ML models as universal codes and information in data. IEEE Transactions on Information Theory, 47, 1712–1717.
-#' Falk and Muthukrishna (2020) Parsimony in Model Selection: Tools for Assessing Fit Propensity.
-#' @author Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
-#' @examples
-#' \donttest{
-#'
-#' # Borrow PoliticalDemocracy data
-#' data(PoliticalDemocracy)
-#'
-#' # Define and fit two models using lavaan package
-#' mod1a <- "y5 ~ y1 + x1
-#'   y1 ~~ 0*x1"
-#' mod2a <- "y5 ~ y1
-#'   x1 ~ y5"
-#'
-#' mod1a.fit <- sem(mod1a, sample.cov = cov(PoliticalDemocracy), sample.nobs = 500)
-#' mod2a.fit <- sem(mod2a, sample.cov = cov(PoliticalDemocracy), sample.nobs = 500)
-#'
-#' # Run fit propensity analysis
-#' # Onion approach, save srmr and CFI
-#' res <- run.fitprop(mod1a.fit, mod2a.fit,
-#'     fit.measure = c("srmr", "cfi"),
-#'     rmethod = "onion", reps = 1000
-#' )
-#'
-#' # Generate summaries
-#' summary(res)
-#'
-#' # sort quantiles differently for srmr and cfi
-#' # Use different quantiles
-#' summary(res, probs = c(0, .25, .5, .75, 1), lower.tail = c(TRUE, FALSE))
-#'
-#' # If some models failed to converge, this would result in
-#' # summaries computed on possibly different replications:
-#' # Use different quantiles
-#' summary(res, samereps = FALSE, lower.tail = c(TRUE, FALSE))
-#'
-#' # For computing NML (experimental)
-#' res <- run.fitprop(mod1a.fit, mod2a.fit,
-#'     fit.measure = "logl",
-#'     rmethod = "onion", reps = 2500
-#' )
-#'
-#' summary(res, NML = TRUE, lower.tail = FALSE)
-#'
-#' # For computing UIF (experimental)
-#' # Orig UIF used least-squares estimation and examined fit function
-#'
-#' mod1a.fit <- sem(mod1a,
-#'     sample.cov = cov(PoliticalDemocracy), sample.nobs = 500,
-#'     estimator = "ULS"
-#' )
-#' mod2a.fit <- sem(mod2a,
-#'     sample.cov = cov(PoliticalDemocracy), sample.nobs = 500,
-#'     estimator = "ULS"
-#' )
-#'
-#' res <- run.fitprop(mod1a.fit, mod2a.fit,
-#'     fit.measure = "fmin",
-#'     rmethod = "onion", reps = 2500
-#' )
-#'
-#' summary(res, UIF = TRUE, lower.tail = TRUE)
-#' }
-#' @importFrom stats quantile median ks.test na.omit
-#' @importFrom utils str
-#' @importFrom effsize cliff.delta cohen.d
-#' @importFrom matrixStats logSumExp
-#' @noRd
-summary.fitprop <- function(object, ..., probs = seq(0, 1, .1), samereps = TRUE, lower.tail = rep(TRUE, ncol(object$fit_list[[1]])),
-                            NML = FALSE, UIF = FALSE) {
-    data <- object$fit_list
-    nmod <- length(data) # number of models
-    nfit <- ncol(data[[1]]) # number of fit measures
-    nrep <- object$reps # number of available replications
-
-    stats <- list()
-    quantiles <- list()
-    efs <- list()
-    if (UIF) {
-        uif <- list()
-    }
-
-    cat(
-        "\n",
-        "Quantiles for each model and fit measure:\n"
-    )
-    for (mod in 1:nmod) {
-        cat("\n Model ", mod, "\n")
-        if (samereps) {
-            qtmp <- NULL
-            for (j in 1:nfit) {
-                qtmp <- cbind(qtmp, quantile(data[[mod]][!is.na(object$complete_mat[, j]), j], ..., probs = probs, na.rm = TRUE))
-            }
-            colnames(qtmp) <- colnames(data[[mod]])
-        } else {
-            qtmp <- apply(data[[mod]], 2, quantile, ..., probs = probs, na.rm = TRUE)
-        }
-        for (m in 1:nfit) {
-            qtmp[, m] <- sort(qtmp[, m], decreasing = !lower.tail[m])
-        }
-        quantiles[[mod]] <- qtmp
-        print.default(round(qtmp, 3))
-        # printCoefmat(qtmp,digits=3,dig.tst=3,cs.ind=1)
-    }
-
-    cat(
-        "\n",
-        "Information about replications for each model and fit measure:\n"
-    )
-
-    for (mod in 1:nmod) {
-        cat("\n Model ", mod, "\n")
-
-        fitnames <- colnames(data[[mod]])
-
-        finite <- apply(data[[mod]], 2, function(x) {
-            sum(is.finite(x))
-        })
-        na <- apply(data[[mod]], 2, function(x) {
-            sum(is.na(x))
-        })
-        nrep <- nrow(data[[mod]])
-        if (samereps) {
-            means <- NULL
-            medians <- NULL
-            uifs <- NULL
-
-            for (j in 1:nfit) {
-                datj <- data[[mod]][!is.na(object$complete_mat[, j]), j]
-
-                means <- c(means, mean(datj))
-                medians <- c(medians, median(datj))
-
-                if (UIF) {
-                    obt <- as.numeric(fitMeasures(object$origmodels[[mod]], fitnames[j]))
-                    n.uif <- length(datj)
-                    if (lower.tail[j]) {
-                        uif.mod <- sum(obt <= datj) / n.uif
-                    } else {
-                        uif.mod <- sum(obt >= datj) / n.uif
-                    }
-                    uifs <- c(uifs, uif.mod)
-                }
-            }
-        } else {
-            means <- colMeans(data[[mod]], na.rm = TRUE)
-            medians <- apply(data[[mod]], 2, median, na.rm = TRUE)
-
-            if (UIF) {
-                for (j in 1:nfit) {
-                    obt <- as.numeric(fitMeasures(object$origmodels[[mod]], fitnames[j]))
-                    n.uif <- length(data[[mod]][!is.na(object$complete_mat[, j]), j])
-                    if (lower.tail[j]) {
-                        uif.mod <- sum(obt <= data[[mod]][!is.na(object$complete_mat[, j]), j]) / n.uif
-                    } else {
-                        uif.mod <- sum(obt >= data[[mod]][!is.na(object$complete_mat[, j]), j]) / n.uif
-                    }
-                    uifs <- c(uifs, uif.mod)
-                }
-            }
-        }
-
-        names(means) <- names(medians) <- fitnames
-        if (UIF) {
-            names(uifs) <- fitnames
-        }
-
-        stats[[mod]] <- list()
-        stats[[mod]]$finite <- finite
-        stats[[mod]]$finite <- na
-        stats[[mod]]$means <- means
-        stats[[mod]]$medians <- medians
-        if (UIF) {
-            stats[[mod]]$uifs <- uifs
-        }
-
-        cat("\nMean across replications\n")
-        print.default(round(means, 3))
-        cat("\nMedian across replications\n")
-        print.default(round(medians, 3))
-        cat("\nNumber of finite values\n")
-        print.default(finite)
-        cat("\nNumber of NA values\n")
-        print.default(na)
-    }
-
-    cat(
-        "\n",
-        "Effect Sizes for Differences in Model Fit:\n"
-    )
-
-    # K-S tests and other effect sizes
-    # Compare all possible pairs of models, and all fit measures
-    for (j in 1:nfit) {
-        efs[[j]] <- list()
-        cat("\n ", colnames(data[[1]])[j], "\n")
-        indx <- 1
-        if (nmod == 1) next
-        for (mod in 1:(nmod - 1)) {
-            for (mod2 in (mod + 1):nmod) {
-                efs[[j]][[indx]] <- list()
-                efs[[j]][[indx]]$title <- paste0("Model ", mod, " vs. Model ", mod2)
-                if (samereps) {
-                    tmp <- c(data[[mod]][!is.na(object$complete_mat[, j]), j], data[[mod2]][!is.na(object$complete_mat[, j]), j])
-                    grp.tmp <- c(rep(1, sum(!is.na(object$complete_mat[, j]))), rep(2, sum(!is.na(object$complete_mat[, j]))))
-
-                    efs[[j]][[indx]]$d <- cohen.d(tmp, as.factor(grp.tmp))$estimate
-                    efs[[j]][[indx]]$delta <- cliff.delta(data[[mod]][!is.na(object$complete_mat[, j]), j], data[[mod2]][!is.na(object$complete_mat[, j]), j])$estimate
-                    efs[[j]][[indx]]$ks <- ks.test(data[[mod]][!is.na(object$complete_mat[, j]), j], data[[mod2]][!is.na(object$complete_mat[, j]), j])$statistic
-                } else {
-                    tmp <- c(data[[mod]][, j], data[[mod2]][, j])
-                    tmp <- na.omit(tmp)
-                    grp.tmp <- c(rep(1, nrep), rep(2, nrep))
-                    if (!is.null(attr(tmp, "na.action"))) {
-                        grp.tmp <- grp.tmp[-attr(tmp, "na.action")]
-                    }
-
-                    efs[[j]][[indx]]$d <- cohen.d(tmp, as.factor(grp.tmp))$estimate
-                    efs[[j]][[indx]]$delta <- cliff.delta(data[[mod]][, j], data[[mod2]][, j])$estimate
-                    efs[[j]][[indx]]$ks <- ks.test(data[[mod]][, j], data[[mod2]][, j])$statistic
-                }
-
-                cat("\n", efs[[j]][[indx]]$title, "\n")
-                cat("   Cohen's d:          ", round(efs[[j]][[indx]]$d, 3), "\n")
-                cat("   Cliff's delta:      ", round(efs[[j]][[indx]]$delta, 3), "\n")
-                cat("   Komolgorov Smirnov: ", round(efs[[j]][[indx]]$ks, 3), "\n")
-
-                indx <- indx + 1
-            }
-        }
-    }
-
-    out <- list()
-    out[["quantiles"]] <- quantiles
-    out[["stats"]] <- stats
-    out[["efs"]] <- efs
-
-    if (NML | UIF) {
-        cat(
-            "\n",
-            "Fit indices for obtained model\n"
-        )
-
-        if (NML & "logl" %in% colnames(data[[1]])) {
-            cat(
-                "\n",
-                "-2*Log-Normalized Maximum Likelihood:\n"
-            )
-
-            # NML (Rissanen)
-            nmls <- vector("numeric")
-            for (mod in 1:nmod) {
-                # remove any clearly invalid logl values (these can't be >0, actually)
-                ll.tmp <- as.numeric(data[[mod]][, "logl"])
-                ll.tmp <- ll.tmp[ll.tmp < 0 & !is.na(ll.tmp)]
-                n.ll <- length(ll.tmp)
-
-                # ll obtained
-                ll.obt <- as.numeric(fitMeasures(object$origmodels[[mod]], "logl"))
-
-                num <- ll.obt
-                denom <- logSumExp(ll.tmp) - log(n.ll)
-
-                # what about log-nml?
-                log.nml.mod <- -2 * ((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
-                cat("\n", paste0("Model ", mod, ": "), round(log.nml.mod, 5))
-                nmls <- c(nmls, log.nml.mod)
-            }
-            out[["nml"]] <- nmls
-        }
-
-
-        if (UIF) {
-            cat("\nUniform Index of Fit (Botha, Shapiro, Steiger, 1988)\n")
-            for (mod in 1:nmod) {
-                cat("\n Model ", mod, "\n")
-                print.default(round(stats[[mod]]$uifs, 3))
-            }
-        }
-    }
-
-    invisible(out)
 }

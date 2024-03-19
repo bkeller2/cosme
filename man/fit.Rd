@@ -4,7 +4,7 @@
 \alias{fit}
 \title{Obtain fit statistics from \code{comse_fit}}
 \usage{
-fit(x)
+fit(object)
 }
 \arguments{
 \item{object}{a \code{cosme_model} object}
