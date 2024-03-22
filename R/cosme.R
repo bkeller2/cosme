@@ -48,7 +48,8 @@ cosme <- function(model, data, option) {
     bbout <- capture.output(
         baseline <- do.call(
             fit_bayes, list(
-                model = baseline_model(freq), data = data, option$bayes
+                model = baseline_model(freq),
+                data = data, option$bayes
             )
         ),
         nullfile()
@@ -200,7 +201,7 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     padding <- max(max(nchar(pname$lhs) + 3L), 10L)
 
     # Begin printing
-    cli::cli_h2('Estiamtes Summary')
+    cli::cli_h2('Estimates Summary')
     if (length(latent) > 0) {
         cli::cli_h3('Latent Variables:')
         cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
