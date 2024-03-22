@@ -48,3 +48,13 @@ baseline_model <- function(model) {
         }) |>
         make_model()
 }
+
+#' Internal function to obtain estimates header
+#' @noRd
+estimate_header <- function(nw) {
+    c('F Est', 'B Est', 'I Est', 'F 2.5%', 'B 2.5%',
+        'I 2.5%', 'F 97.5%', 'B 97.5%',
+        'I 97.5%'
+    ) |> formatC(width = nw, flag = '+')
+}
+

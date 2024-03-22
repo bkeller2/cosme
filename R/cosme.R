@@ -133,11 +133,138 @@ estimates <- function(object) {
                 info  = iint[,2]
             )
         ),
-        pname = apply(
-            f[,c('lhs', 'op', 'rhs')],
-            1, paste0, collapse = ' '
-        )
+        class = 'cosme_est',
+        pname = f[,c('lhs', 'op', 'rhs')],
+        ov    = lavNames(object$freq, type = 'ov'),
+        free  = is.na(object$freq@ParTable$ustart)
     )
+}
+
+#' Print Estimates from `comse_est`
+#' @description
+#' A short description...
+#'
+# TODO better description of parameters
+#' @param object a `cosme_model` object
+#' @param ... Further arguments passed to or from other methods
+#' @param nd  Number of decimal places to print (Defaults 3)
+#' @import cli
+#' @export
+print.cosme_est <- function(x, ..., nd = 3L) {
+
+    # Obtain parameter names and observed variables
+    x |> attr('pname') -> pname
+    x |> attr('ov') -> ov
+    x |> attr('free') -> free
+
+    # Obtain values
+    x |> do.call(what = cbind) |> round(nd) |> format() -> values
+
+    # Get max width
+    values |> nchar() |> max() -> nwidth
+
+    # Subset based on type
+    latent <- which(pname$op == '=~')
+    regression <- which(pname$op == '~')
+    intercept  <- which(pname$op == '~1')
+    covariance <- which(pname$op == '~~' & pname$lhs != pname$rhs)
+    variance <- which(pname$op == '~~' & pname$lhs == pname$rhs)
+
+    # Rearrange pname for duplicates
+    for (i in seq_along(latent)) {
+        if (i == length(latent)) break;
+        for (j in (i+1):length(latent)) {
+            si <- latent[i]
+            sj <- latent[j]
+            if (pname$lhs[si] == pname$lhs[sj]) pname$lhs[sj] <- ''
+        }
+    }
+    for (i in seq_along(covariance)) {
+        if (i == length(covariance)) break;
+        for (j in (i+1):length(covariance)) {
+            si <- covariance[i]
+            sj <- covariance[j]
+            if (pname$lhs[si] == pname$lhs[sj]) pname$lhs[sj] <- ''
+        }
+    }
+    for (i in seq_along(regression)) {
+        if (i == length(regression)) break;
+        for (j in (i+1):length(regression)) {
+            si <- regression[i]
+            sj <- regression[j]
+            if (pname$lhs[si] == pname$lhs[sj]) pname$lhs[sj] <- ''
+        }
+    }
+
+    # Obtain padding
+    padding <- max(max(nchar(pname$lhs) + 3L), 10L)
+
+    # Begin printing
+    cli::cli_h2('Estiamtes Summary')
+    if (length(latent) > 0) {
+        cli::cli_h3('Latent Variables:')
+        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        for(i in latent) {
+            val <- pname$lhs[i]
+            val_r <- pname$rhs[i]
+            if (nchar(val) != 0) cat(paste0('  ', val, ' =~'), fill = T)
+            cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
+            if (free[i]) cat(values[i,], fill = T)
+            else cat(values[i,1], fill = T)
+        }
+    }
+    if (length(regression) > 0) {
+        cli::cli_h3('Regressions:')
+        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        for(i in regression) {
+            val <- pname$lhs[i]
+            val_r <- pname$rhs[i]
+            if (nchar(val) != 0) cat(paste0('  ', val, ' ~'), fill = T)
+            cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
+            if (free[i]) cat(values[i,], fill = T)
+            else cat(values[i,1], fill = T)
+        }
+    }
+    if (length(covariance) > 0) {
+        cli::cli_h3('Covariances:')
+        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        for(i in covariance) {
+            val <- pname$lhs[i]
+            val_r <- pname$rhs[i]
+            if (nchar(val) != 0) cat(paste0('  ', val, ' ~~'), fill = T)
+            cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
+            if (free[i]) cat(values[i,], fill = T)
+            else cat(values[i,1], fill = T)
+        }
+    }
+    if (length(intercept) > 0) {
+        cli::cli_h3('Intercepts:')
+        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        for(i in intercept) {
+            if (pname$lhs[i] %in% ov) {
+                cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
+            } else {
+                cat(formatC(paste0('    ', pname$lhs[i]), width = padding + 4, flag = '-'))
+            }
+            if (free[i]) cat(values[i,], fill = T)
+            else cat(values[i,1], fill = T)
+        }
+    }
+    if (length(variance) > 0) {
+        cli::cli_h3('Variances:')
+        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        for(i in variance) {
+            if (pname$lhs[i] %in% ov) {
+                cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
+            } else {
+                cat(formatC(paste0('    ', pname$lhs[i]), width = padding + 4, flag = '-'))
+            }
+            if (free[i]) cat(values[i,], fill = T)
+            else cat(values[i,1], fill = T)
+        }
+    }
+
+    invisible(x)
 }
 
 
