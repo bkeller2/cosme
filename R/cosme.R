@@ -136,7 +136,10 @@ estimates <- function(object) {
         ),
         class = 'cosme_est',
         pname = f[,c('lhs', 'op', 'rhs')],
-        ov    = lavNames(object$freq, type = 'ov'),
+        ov    = c(
+            lavNames(object$freq, type = 'ov.nox'),
+            lavNames(object$freq, type = 'lv.nox')
+        ),
         free  = is.na(object$freq@ParTable$ustart)
     )
 }
