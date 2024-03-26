@@ -204,64 +204,83 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     cli::cli_h2('Estimates Summary')
     if (length(latent) > 0) {
         cli::cli_h3('Latent Variables:')
-        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        cat(strrep(' ', padding + 4))
+        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(strrep(' ', padding + 4))
+        print_values(estimate_header2(nwidth))
         for(i in latent) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
-            if (nchar(val) != 0) cat(paste0('  ', val, ' =~'), fill = T)
+            if (nchar(val) != 0) {
+                cat(formatC(paste0('  ', val, ' =~'), width = padding + 4, flag = '-'))
+                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+            }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
-            if (free[i]) cat(values[i,], fill = T)
-            else cat(values[i,1], fill = T)
+            print_values(values[i,], free = free[i])
         }
     }
     if (length(regression) > 0) {
         cli::cli_h3('Regressions:')
-        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        cat(strrep(' ', padding + 4))
+        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(strrep(' ', padding + 4))
+        print_values(estimate_header2(nwidth))
         for(i in regression) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
-            if (nchar(val) != 0) cat(paste0('  ', val, ' ~'), fill = T)
+            if (nchar(val) != 0) {
+                cat(formatC(paste0('  ', val, ' ~'), width = padding + 4, flag = '-'))
+                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+            }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
-            if (free[i]) cat(values[i,], fill = T)
-            else cat(values[i,1], fill = T)
+            print_values(values[i,], free = free[i])
         }
     }
     if (length(covariance) > 0) {
         cli::cli_h3('Covariances:')
-        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        cat(strrep(' ', padding + 4))
+        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(strrep(' ', padding + 4))
+        print_values(estimate_header2(nwidth))
         for(i in covariance) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
-            if (nchar(val) != 0) cat(paste0('  ', val, ' ~~'), fill = T)
+            if (nchar(val) != 0) {
+                cat(formatC(paste0('  ', val, ' ~~'), width = padding + 4, flag = '-'))
+                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+            }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
-            if (free[i]) cat(values[i,], fill = T)
-            else cat(values[i,1], fill = T)
+            print_values(values[i,], free = free[i])
         }
     }
     if (length(intercept) > 0) {
         cli::cli_h3('Intercepts:')
-        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        cat(strrep(' ', padding + 4))
+        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(strrep(' ', padding + 4))
+        print_values(estimate_header2(nwidth))
         for(i in intercept) {
             if (pname$lhs[i] %in% ov) {
                 cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
             } else {
                 cat(formatC(paste0('    ', pname$lhs[i]), width = padding + 4, flag = '-'))
             }
-            if (free[i]) cat(values[i,], fill = T)
-            else cat(values[i,1], fill = T)
+            print_values(values[i,], free = free[i])
         }
     }
     if (length(variance) > 0) {
         cli::cli_h3('Variances:')
-        cat(strrep(' ', padding + 3), estimate_header(nwidth), fill = T)
+        cat(strrep(' ', padding + 4))
+        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(strrep(' ', padding + 4))
+        print_values(estimate_header2(nwidth))
         for(i in variance) {
             if (pname$lhs[i] %in% ov) {
                 cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
             } else {
                 cat(formatC(paste0('    ', pname$lhs[i]), width = padding + 4, flag = '-'))
             }
-            if (free[i]) cat(values[i,], fill = T)
-            else cat(values[i,1], fill = T)
+            print_values(values[i,], free = free[i])
         }
     }
 

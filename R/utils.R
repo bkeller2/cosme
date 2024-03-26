@@ -49,12 +49,26 @@ baseline_model <- function(model) {
         make_model()
 }
 
-#' Internal function to obtain estimates header
+#' Internal function to obtain estimates header1
 #' @noRd
-estimate_header <- function(nw) {
-    c('F Est', 'B Est', 'I Est', 'F 2.5%', 'B 2.5%',
-        'I 2.5%', 'F 97.5%', 'B 97.5%',
-        'I 97.5%'
-    ) |> formatC(width = nw, flag = '+')
+estimate_header1 <- function(nw) {
+    c(' Estimate', ' Lower Bound (2.5%)', ' Upper Bound (97.5%)') |>
+        format(width = nw*3 + 2, justify = 'centre')
+}
+#' Internal function to obtain estimates header2
+#' @noRd
+estimate_header2 <- function(nw) {
+    rep(c('Freq', 'Bayes', 'Info'), 3)  |> formatC(width = nw, flag = '+')
 }
 
+#' Internal function to print out values
+#' @noRd
+print_values <- function(values, free = TRUE) {
+    cat(values[1:3])
+    cat(' |')
+    if (free) cat(values[4:6])
+    else cat(strrep(' ', nchar(values[4:6])))
+    cat(' |')
+    if (free) cat(values[7:9], fill = T)
+    else cat(strrep(' ', nchar(values[7:9])), fill = T)
+}
