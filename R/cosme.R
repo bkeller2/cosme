@@ -5,13 +5,14 @@
 # TODO better description of parameters
 #' @param model a `cosme_model` object
 #' @param data a `data.frame`
+#' @param info a [base::logical] If `TRUE` then fit information theory
 #' @param option a `list` object with options passed to various methods. See details
 #' @details
 #' Additional details...
 #'
 #' @import cli
 #' @export
-cosme <- function(model, data, option) {
+cosme <- function(model, data, info = FALSE, option) {
     # Check that it is a model
     if (!is.model(model)) model <- make_model(model)
 
@@ -58,9 +59,13 @@ cosme <- function(model, data, option) {
     cli_progress_done()
 
     # Run information theory
-    cli::cli_alert('Fitting Information Theory')
-    flush.console()
-    info <- suppressWarnings(do.call(fit_info, c(inp, option$info)))
+    if (info) {
+        cli::cli_alert('Fitting Information Theory')
+        flush.console()
+        info <- suppressWarnings(do.call(fit_info, c(inp, option$info)))
+    } else {
+        info <- NULL
+    }
 
     # Create `cosme_fit` and return
     structure(
@@ -99,10 +104,12 @@ estimates <- function(object) {
         ))
     }
 
+    ## Get if info theory has been fit
+    has_info <- !is.null(object$info)
+
     ## Get parameter estimates
     f <- parameterEstimates(object$freq)
     b <- parameterEstimates(object$bayes)
-    i <- vapply(object$info$mod_list[[1]], \(.) .@ParTable$est, numeric(NROW(f)))
 
     ## Extract Bayesian posterior intervals
     # Have to capture output to prevent printing
@@ -111,9 +118,14 @@ estimates <- function(object) {
     x[, c('pi.lower', 'pi.upper')] |> as.numeric() |> matrix(ncol = 2) -> bpi
     # Change NA to estimate
     is.na(bpi) |> ifelse(b$est, bpi) -> bpi
-    # blavaan::blavInspect(o$bayes, 'hpd') # Doesnt match same rows columns
-    ## Extract information theory interval
-    iint <- t(apply(i, 1, quantile, prob = c(0.025, 0.975)))
+    # blavaan::blavInspect(object$bayes, 'hpd') # Doesnt match same rows columns
+
+    ## Extract information theory
+    if (has_info) {
+        i <- vapply(object$info$mod_list[[1]], \(.) .@ParTable$est, numeric(NROW(f)))
+        # intervals
+        iint <- t(apply(i, 1, quantile, prob = c(0.025, 0.975, 0.5)))
+    }
 
     ## Return
     structure(
@@ -121,17 +133,17 @@ estimates <- function(object) {
             estimate = cbind(
                 freq  = f$est,
                 bayes = b$est,
-                info  = apply(i, 1, median)
+                info  = if(has_info) iint[,3] else NULL
             ),
             interval_lower = cbind(
                 freq  = f$ci.lower,
                 bayes = bpi[,1],
-                info  = iint[,1]
+                info  = if(has_info) iint[,1] else NULL
             ),
             interval_upper = cbind(
                 freq  = f$ci.upper,
                 bayes = bpi[,2],
-                info  = iint[,2]
+                info  = if(has_info) iint[,2] else NULL
             )
         ),
         class = 'cosme_est',
@@ -140,7 +152,8 @@ estimates <- function(object) {
             lavNames(object$freq, type = 'ov.nox'),
             lavNames(object$freq, type = 'lv.nox')
         ),
-        free  = is.na(object$freq@ParTable$ustart)
+        free  = is.na(object$freq@ParTable$ustart),
+        has_info = has_info
     )
 }
 
@@ -161,8 +174,16 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     x |> attr('ov') -> ov
     x |> attr('free') -> free
 
+    # Obtain if it has info theory or not
+    x |> attr('has_info') -> has_info
+
     # Obtain values
-    x |> do.call(what = cbind) |> round(nd) |> format() -> values
+    (
+        x
+        |> do.call(what = cbind)
+        |> round(nd)
+        |> format(width = if(has_info) NULL else 10)
+    ) -> values
 
     # Get max width
     values |> nchar() |> max() -> nwidth
@@ -202,21 +223,28 @@ print.cosme_est <- function(x, ..., nd = 3L) {
 
     # Obtain padding
     padding <- max(max(nchar(pname$lhs) + 3L), 10L)
+    ncol <- if(has_info) 3 else 2
+
+    # Obtain printing functions
+    funcs <- get_printfunc(nwidth, has_info)
+    estimate_header1 <- funcs$estimate_header1
+    estimate_header2 <- funcs$estimate_header2
+    print_values     <- funcs$print_values
 
     # Begin printing
     cli::cli_h2('Estimates Summary')
     if (length(latent) > 0) {
         cli::cli_h3('Latent Variables:')
         cat(strrep(' ', padding + 4))
-        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(estimate_header1(), sep = '  ', fill = T)
         cat(strrep(' ', padding + 4))
-        print_values(estimate_header2(nwidth))
+        print_values(estimate_header2())
         for(i in latent) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
             if (nchar(val) != 0) {
                 cat(formatC(paste0('  ', val, ' =~'), width = padding + 4, flag = '-'))
-                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+                cat(rep(strrep(' ', nwidth*ncol + ncol - 1), 3), sep = ' |', fill = T)
             }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
             print_values(values[i,], free = free[i])
@@ -225,15 +253,15 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     if (length(regression) > 0) {
         cli::cli_h3('Regressions:')
         cat(strrep(' ', padding + 4))
-        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(estimate_header1(), sep = '  ', fill = T)
         cat(strrep(' ', padding + 4))
-        print_values(estimate_header2(nwidth))
+        print_values(estimate_header2())
         for(i in regression) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
             if (nchar(val) != 0) {
                 cat(formatC(paste0('  ', val, ' ~'), width = padding + 4, flag = '-'))
-                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+                cat(rep(strrep(' ', nwidth*ncol + ncol - 1), 3), sep = ' |', fill = T)
             }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
             print_values(values[i,], free = free[i])
@@ -242,15 +270,15 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     if (length(covariance) > 0) {
         cli::cli_h3('Covariances:')
         cat(strrep(' ', padding + 4))
-        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(estimate_header1(), sep = '  ', fill = T)
         cat(strrep(' ', padding + 4))
-        print_values(estimate_header2(nwidth))
+        print_values(estimate_header2())
         for(i in covariance) {
             val <- pname$lhs[i]
             val_r <- pname$rhs[i]
             if (nchar(val) != 0) {
                 cat(formatC(paste0('  ', val, ' ~~'), width = padding + 4, flag = '-'))
-                cat(rep(strrep(' ', nwidth*3 + 2), 3), sep = ' |', fill = T)
+                cat(rep(strrep(' ', nwidth*ncol + ncol - 1), 3), sep = ' |', fill = T)
             }
             cat(formatC(paste0('    ', val_r), width = padding + 4, flag = '-'))
             print_values(values[i,], free = free[i])
@@ -259,9 +287,9 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     if (length(intercept) > 0) {
         cli::cli_h3('Intercepts:')
         cat(strrep(' ', padding + 4))
-        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(estimate_header1(), sep = '  ', fill = T)
         cat(strrep(' ', padding + 4))
-        print_values(estimate_header2(nwidth))
+        print_values(estimate_header2())
         for(i in intercept) {
             if (pname$lhs[i] %in% ov) {
                 cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
@@ -274,9 +302,9 @@ print.cosme_est <- function(x, ..., nd = 3L) {
     if (length(variance) > 0) {
         cli::cli_h3('Variances:')
         cat(strrep(' ', padding + 4))
-        cat(estimate_header1(nwidth), sep = '  ', fill = T)
+        cat(estimate_header1(), sep = '  ', fill = T)
         cat(strrep(' ', padding + 4))
-        print_values(estimate_header2(nwidth))
+        print_values(estimate_header2())
         for(i in variance) {
             if (pname$lhs[i] %in% ov) {
                 cat(formatC(paste0('   .', pname$lhs[i]), width = padding + 4, flag = '-'))
@@ -310,10 +338,9 @@ fit <- function(object) {
     # Obtain bayesian fit
     # Takes awhile
     bfit <- blavaan::blavFitIndices(
-        o$bayes, baseline.model = attr(o, 'b_base'),
+        object$bayes, baseline.model = attr(o, 'b_base'),
         fit.measures = c('BRMSEA', 'BCFI')
     )
-
 
     # Return output
     list(
@@ -321,11 +348,11 @@ fit <- function(object) {
         # Need to wait for semTools to update
         # freq  = list(lavaan::fitmeasures(object$freq), semTools::moreFitIndices(object$freq)),
         freq  = lavaan::fitmeasures(object$freq, c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")),
-        bayes =c(
-            ppp = lavaan::fitMeasures(o$bayes, c("ppp"))[[1]],
+        bayes = c(
+            ppp = lavaan::fitMeasures(object$bayes, c("ppp"))[[1]],
             rmsea = mean(bfit@indices$BRMSEA),
             cfi = mean(bfit@indices$BCFI)
         ),
-        info  = o$info$fit_list[[1]]
+        info  = if(is.null(object$info)) NA else object$info$fit_list[[1]]
     )
 }

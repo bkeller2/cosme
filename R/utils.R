@@ -49,26 +49,36 @@ baseline_model <- function(model) {
         make_model()
 }
 
-#' Internal function to obtain estimates header1
+
+#' Internal function for generating print functions
 #' @noRd
-estimate_header1 <- function(nw) {
-    c(' Estimate', ' Lower Bound (2.5%)', ' Upper Bound (97.5%)') |>
-        format(width = nw*3 + 2, justify = 'centre')
-}
-#' Internal function to obtain estimates header2
-#' @noRd
-estimate_header2 <- function(nw) {
-    rep(c('Freq', 'Bayes', 'Info'), 3)  |> formatC(width = nw, flag = '+')
+get_printfunc <- function(nw, info) {
+    force(nw); force(info)
+    # Return functions
+    list(
+        estimate_header1 = function() {
+            ncol <- if(info) 3 else 2
+            c(' Estimate', ' Lower Bound (2.5%)', ' Upper Bound (97.5%)') |>
+                format(width = nw*ncol + ncol - 1, justify = 'centre')
+        },
+        estimate_header2 = function() {
+            rep(c('Freq', 'Bayes', if(info) 'Info' else NULL), 3) |>
+                formatC(width = nw, flag = '+')
+        },
+        print_values = function(values, free = TRUE) {
+            # Handle if info exists or not
+            sel1 <- if(info) 1:3 else 1:2
+            sel2 <- if(info) 4:6 else 3:4
+            sel3 <- if(info) 7:9 else 5:6
+
+            cat(values[sel1])
+            cat(' |')
+            if (free) cat(values[sel2])
+            else cat(strrep(' ', nchar(values[sel2])))
+            cat(' |')
+            if (free) cat(values[sel3], fill = T)
+            else cat(strrep(' ', nchar(values[sel3])), fill = T)
+        }
+    )
 }
 
-#' Internal function to print out values
-#' @noRd
-print_values <- function(values, free = TRUE) {
-    cat(values[1:3])
-    cat(' |')
-    if (free) cat(values[4:6])
-    else cat(strrep(' ', nchar(values[4:6])))
-    cat(' |')
-    if (free) cat(values[7:9], fill = T)
-    else cat(strrep(' ', nchar(values[7:9])), fill = T)
-}
