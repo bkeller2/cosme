@@ -35,7 +35,8 @@ o <- cosme(
         list(
             info =  list(
                 reps = 100,
-                iter.max = 50
+                bounds = 'pos.var',
+                optim.force.converged = TRUE
             )
         )
 )
