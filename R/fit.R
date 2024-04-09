@@ -43,9 +43,12 @@ fit_info <- function(model, data, reps, ...) {
 
     (model
         |> as.lavaan()
-        |> cfa(sample.cov = tmpmat, sample.nobs = NROW(data))
+        |> cfa(sample.cov = tmpmat, sample.nobs = NROW(data), ...)
         |> run_fitprop(
-            fit.measure =  c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr"),
+            fit.measure =  c(
+                "chisq", "df", "pvalue", "cfi", "rmsea",
+                "rmsea.ci.lower", "rmsea.ci.upper", "srmr"
+            ),
             rmethod = "onion",
             reps = reps,
             ...
