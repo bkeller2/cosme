@@ -365,10 +365,11 @@ fit <- function(object) {
             ),
             info  = if(is.null(object$info)) {
                 NA
+
             } else {
-                apply(x$info, 2, quantile, probs = seq(0.1, 0.9, by = 0.1))
+                apply(object$info$fit_list[[1]], 2, quantile, probs = seq(0.1, 0.9, by = 0.1))
             }
-        )#,
-        #class = 'cosme_mfit'
+        ),
+        class = 'cosme_mfit'
     )
 }
