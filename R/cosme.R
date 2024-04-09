@@ -82,6 +82,19 @@ cosme <- function(model, data, info = FALSE, option) {
     )
 }
 
+#' Summarize from `comse_fit`
+#' @description
+#' A short description...
+#'
+# TODO better description of parameters
+#' @param object a `cosme_model` object
+#' @param ... additional arguments passed to `print`
+#' @export
+summary.cosme_fit <- function(object, ...) {
+    object |> estimates() |> print(...)
+}
+
+
 #' Check if `cosme_fit`
 #' @noRd
 is.fit <- function(x) {
