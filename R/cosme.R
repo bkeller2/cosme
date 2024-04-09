@@ -338,21 +338,37 @@ fit <- function(object) {
     # Obtain bayesian fit
     # Takes awhile
     bfit <- blavaan::blavFitIndices(
-        object$bayes, baseline.model = attr(o, 'b_base'),
+        object$bayes, baseline.model = attr(object, 'b_base'),
         fit.measures = c('BRMSEA', 'BCFI')
     )
 
     # Return output
-    list(
-        # DOES NOT CURRENTLY WORK DUE TO BUG IN semTools
-        # Need to wait for semTools to update
-        # freq  = list(lavaan::fitmeasures(object$freq), semTools::moreFitIndices(object$freq)),
-        freq  = lavaan::fitmeasures(object$freq, c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")),
-        bayes = c(
-            ppp = lavaan::fitMeasures(object$bayes, c("ppp"))[[1]],
-            rmsea = mean(bfit@indices$BRMSEA),
-            cfi = mean(bfit@indices$BCFI)
-        ),
-        info  = if(is.null(object$info)) NA else object$info$fit_list[[1]]
+    structure(
+        list(
+            # DOES NOT CURRENTLY WORK DUE TO BUG IN semTools
+            # Need to wait for semTools to update
+            # freq  = list(lavaan::fitmeasures(object$freq), semTools::moreFitIndices(object$freq)),
+            freq  = lavaan::fitmeasures(
+                object$freq, c(
+                    "chisq", "df", "pvalue", "cfi", "rmsea",
+                    "rmsea.ci.lower", "rmsea.ci.upper", "srmr"
+                )
+            ),
+            bayes = c(
+                ppp = lavaan::fitMeasures(object$bayes, c("ppp"))[[1]],
+                cfi = mean(bfit@indices$BRMSEA),
+                cfi = quantile(bfit@indices$BCFI, probs = 0.025),
+                cfi = quantile(bfit@indices$BCFI, probs = 0.975),
+                rmsea = mean(bfit@indices$BRMSEA),
+                rmsea = quantile(bfit@indices$BRMSEA, probs = 0.025),
+                rmsea = quantile(bfit@indices$BRMSEA, probs = 0.975)
+            ),
+            info  = if(is.null(object$info)) {
+                NA
+            } else {
+                apply(x$info, 2, quantile, probs = seq(0.1, 0.9, by = 0.1))
+            }
+        )#,
+        #class = 'cosme_mfit'
     )
 }
