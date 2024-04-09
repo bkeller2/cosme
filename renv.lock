@@ -971,6 +971,22 @@
       ],
       "Hash": "c19df082ba346b0ffa6f833e92de34d1"
     },
+    "semTools": {
+      "Package": "semTools",
+      "Version": "0.5-6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "graphics",
+        "lavaan",
+        "methods",
+        "pbivnorm",
+        "stats",
+        "utils"
+      ],
+      "Hash": "9374d79226103541b8293009f81da90f"
+    },
     "stringi": {
       "Package": "stringi",
       "Version": "1.8.3",
