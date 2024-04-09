@@ -1,13 +1,12 @@
 Package: cosme
 Type: Package
-Title: What the Package Does (Title Case)
+Title: An R Package for CoSME project
 Version: 0.0.1
 Authors@R: c(
     person("Brian T.", "Keller", email = "btkeller@missouri.edu", role = c("aut", "cre", "cph")),
     person("Sonja", "Winter", email = "sdwinter@missouri.edu", role = c("aut")),
     person("Wesley E.", "Bonifay", email = "bonifayw@missouri.edu", role = c("aut")))
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: This package is currently under development and has not been released yet.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -24,7 +23,8 @@ Imports:
     clusterGeneration,
     effsize,
     matrixStats,
-    matrixcalc
+    matrixcalc,
+    semTools
 Suggests: 
     knitr,
     rmarkdown
