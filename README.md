@@ -25,16 +25,15 @@ m <- c(
     "speed   =~ x7 + x8 + x9"
 )
 
-# Runs 100 reps for Information Theory
-## Set max iterations to 50
-# Run
+# Runs 1000 reps for Information Theory
 o <- cosme(
     m,
     HSdata,
+    info = TRUE,
     option = 
         list(
-            info =  list(
-                reps = 100,
+            info = list(
+                reps = 1000,
                 bounds = 'pos.var',
                 optim.force.converged = TRUE
             )
