@@ -43,7 +43,13 @@ fit_info <- function(model, data, reps, ...) {
 
     (model
         |> as.lavaan()
-        |> cfa(sample.cov = tmpmat, sample.nobs = NROW(data), ...)
+        |> cfa(
+            sample.cov = tmpmat,
+            sample.nobs = NROW(data),
+            bounds = 'pos.var',
+            optim.force.converged = TRUE,
+            ...
+        )
         |> run_fitprop(
             fit.measure =  c(
                 "chisq", "df", "pvalue", "cfi", "rmsea",

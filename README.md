@@ -33,9 +33,7 @@ o <- cosme(
     option = 
         list(
             info = list(
-                reps = 1000,
-                bounds = 'pos.var',
-                optim.force.converged = TRUE
+                reps = 1000
             )
         )
 )
