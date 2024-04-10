@@ -14,35 +14,39 @@ This package is currently under development and has not been released yet.
 ## Load Package
 library(cosme)
 
-## Get data
+## Get Holzinger Data from `lavaan`
 data(HolzingerSwineford1939, package = 'lavaan')
 HSdata <- HolzingerSwineford1939[,7:15]
 
-## Create Model
+## Set up model via `lavaan` syntax
+## Uses `lavaan::cfa()` which assumes factors
+##   are correlated
 m <- c(
     "visual  =~ x1 + x2 + x3",
     "textual =~ x4 + x5 + x6",
     "speed   =~ x7 + x8 + x9"
 )
 
-# Runs 1000 reps for Information Theory
+## Runs 5000 reps for Information Theory
 o <- cosme(
-    m,
-    HSdata,
-    info = TRUE,
-    option = 
-        list(
-            info = list(
-                reps = 1000
-            )
-        )
+    m,           # Model Specified
+    HSdata,      # Data Set
+    info = TRUE, # Seting to TRUE for Info
+    # Number of replications for Info
+    option = list(info =  list(reps = 5000))
 )
 
-# There will be 3 slots in `o`
+# Obtain pre-run data
+# o <- readRDS('hs-run.rds')
+
+## There will be 3 slots in `o`
 # - `info`  information theory results
 # - `freq`  frequentist results
 # - `bayes` bayesian results
-## Then functions will be used to print out information from `o`
+
+## Print out summaries
+estimates(o)    # Estimates
+fit(o)          # Fit statistics
 ```
 
 ## Bug Reporting and Feature Request
