@@ -28,7 +28,7 @@ fit_mat <- function(mat, lavmodel, vnames, saveModel, fit.measure) {
 
             my_fitted_model <- lavaan(
                 sample.cov = mat,
-                sample.nobs = lavInspect(lavmodel, "nobs"),
+                sample.nobs = lavmodel@SampleStats@nobs |> unlist(),
                 slotOptions = lavmodel@Options,
                 slotParTable = lavmodel@ParTable,
                 slotCache = lavmodel@Cache
