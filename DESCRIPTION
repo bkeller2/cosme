@@ -1,7 +1,7 @@
 Package: cosme
 Type: Package
 Title: An R Package for CoSME project
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: c(
     person("Brian T.", "Keller", email = "btkeller@missouri.edu", role = c("aut", "cre", "cph")),
     person("Sonja", "Winter", email = "sdwinter@missouri.edu", role = c("aut")),
