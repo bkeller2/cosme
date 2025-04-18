@@ -4,12 +4,12 @@
 \alias{summary.cosme_fit}
 \title{Summarize from \code{comse_fit}}
 \usage{
-summary.cosme_fit(object, ...)
+\method{summary}{cosme_fit}(object, ...)
 }
 \arguments{
 \item{object}{a \code{cosme_model} object}
 
-\item{...}{additional arguments passed to \code{print}}
+\item{...}{additional arguments passed to \code{\link{print}}}
 }
 \description{
 A short description...

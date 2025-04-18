@@ -4,9 +4,9 @@
 #'
 # TODO better description of parameters
 #' @param model a `cosme_model` object
-#' @param data a `data.frame`
-#' @param info a [base::logical] If `TRUE` then fit information theory
-#' @param option a `list` object with options passed to various methods. See details
+#' @param data a [`data.frame`]
+#' @param info a [logical] If `TRUE` then fit information theory
+#' @param option a [`list`] object with options passed to various methods. See details
 #' @details
 #' Additional details...
 #'
@@ -88,7 +88,8 @@ cosme <- function(model, data, info = FALSE, option) {
 #'
 # TODO better description of parameters
 #' @param object a `cosme_model` object
-#' @param ... additional arguments passed to `print`
+#' @param ... additional arguments passed to [`print`]
+#' @exportS3Method base::summary
 #' @export
 summary.cosme_fit <- function(object, ...) {
     object |> estimates() |> print(...)
@@ -107,9 +108,14 @@ is.fit <- function(x) {
 #'
 # TODO better description of parameters
 #' @param object a `cosme_model` object
+#' @param std Logical. Standardized solution or not. See details
+#' @details
+#' Returns lavaan's `std.all` method of standardization.
+#' See [`lavaan::standardizedSolution`] for more information.
+#'
 #' @import lavaan blavaan
 #' @export
-estimates <- function(object) {
+estimates <- function(object, std = FALSE) {
     # Check that it is a `cosme_fit`
     if (!is.fit(object)) {
         throw_error(c(
@@ -120,24 +126,40 @@ estimates <- function(object) {
     ## Get if info theory has been fit
     has_info <- !is.null(object$info)
 
+    # Get function to obtain parameters
+    paramFunc <- if (std) standardizedSolution else parameterEstimates
+
     ## Get parameter estimates
-    f <- parameterEstimates(object$freq)
-    b <- parameterEstimates(object$bayes)
+    f <- paramFunc(object$freq)
+    b <- paramFunc(object$bayes)
+
+    ## Rename standardized
+    if (std) {
+        names(f) <- gsub('est.std', 'est', names(f), fixed = TRUE)
+        names(b) <- gsub('est.std', 'est', names(b), fixed = TRUE)
+    }
 
     ## Extract Bayesian posterior intervals
-    # Have to capture output to prevent printing
-    tmp <- capture.output(x <- summary(object$bayes), nullfile())
-    # Extract intervals |> make numbers |> make matrix -> ci
-    x[, c('pi.lower', 'pi.upper')] |> as.numeric() |> matrix(ncol = 2) -> bpi
-    # Change NA to estimate
-    is.na(bpi) |> ifelse(b$est, bpi) -> bpi
-    # blavaan::blavInspect(object$bayes, 'hpd') # Doesnt match same rows columns
+    # If standardized use standardizedPosterior function otherwise old method
+    if (std) {
+        bpi <- standardizedPosterior(object$bayes) |>
+            apply(2, emp_hpd, simplify = FALSE) |>
+            do.call(rbind, args = _)
+    } else {
+        # Have to capture output to prevent printing
+        tmp <- capture.output(x <- summary(object$bayes), nullfile())
+        # Extract intervals |> make numbers |> make matrix -> ci
+        x[, c('pi.lower', 'pi.upper')] |> as.numeric() |> matrix(ncol = 2) -> bpi
+        # Change NA to estimate
+        is.na(bpi) |> ifelse(b$est, bpi) -> bpi
+        # blavaan::blavInspect(object$bayes, 'hpd') # Doesnt match same rows columns
+    }
 
     ## Extract information theory
     if (has_info) {
-        i <- vapply(object$info$mod_list[[1]], \(.) .@ParTable$est, numeric(NROW(f)))
+        i <- vapply(object$info$mod_list[[1]], \(.) paramFunc(.)[,4], numeric(NROW(f)))
         # intervals
-        iint <- t(apply(i, 1, quantile, prob = c(0.025, 0.975, 0.5)))
+        iint <- t(apply(i, 1, quantile, prob = c(0.025, 0.975, 0.5), na.rm = TRUE))
     }
 
     ## Return
@@ -166,7 +188,8 @@ estimates <- function(object) {
             lavNames(object$freq, type = 'lv.nox')
         ),
         free  = is.na(object$freq@ParTable$ustart),
-        has_info = has_info
+        has_info = has_info,
+        is_std = std
     )
 }
 
@@ -177,26 +200,45 @@ estimates <- function(object) {
 # TODO better description of parameters
 #' @param object a `cosme_model` object
 #' @param ... Further arguments passed to or from other methods
+#' @param info Logical. Include printing of Information Theory results
 #' @param nd  Number of decimal places to print (Defaults 3)
 #' @import cli
+#' @exportS3Method base::print
 #' @export
-print.cosme_est <- function(x, ..., nd = 3L) {
+print.cosme_est <- function(x, ..., info = FALSE, nd = 3L) {
 
     # Obtain parameter names and observed variables
     x |> attr('pname') -> pname
     x |> attr('ov') -> ov
     x |> attr('free') -> free
+    x |> attr('is_std') -> is_std
 
-    # Obtain if it has info theory or not
-    x |> attr('has_info') -> has_info
+    # If standardized set all to free
+    if (is_std) free <- rep(TRUE, length(free))
 
-    # Obtain values
-    (
-        x
-        |> do.call(what = cbind)
-        |> round(nd)
-        |> format(width = if(has_info) NULL else 10)
-    ) -> values
+    # Remove info theory if there and not requested
+    if (!info && attr(x, 'has_info')) {
+        has_info <- FALSE
+
+        # Remove info
+        (
+            lapply(x, \(.) .[,c('freq', 'bayes')])
+            |> do.call(what = cbind)
+            |> round(nd)
+            |> format(width = if(has_info) NULL else 10)
+        ) -> values
+    } else {
+        # Obtain if it has info theory or not
+        has_info <- x |> attr('has_info')
+
+        # Obtain values
+        (
+            x
+            |> do.call(what = cbind)
+            |> round(nd)
+            |> format(width = if(has_info) NULL else 10)
+        ) -> values
+    }
 
     # Get max width
     values |> nchar() |> max() -> nwidth
@@ -246,6 +288,7 @@ print.cosme_est <- function(x, ..., nd = 3L) {
 
     # Begin printing
     cli::cli_h2('Estimates Summary')
+    if (is_std) cli::cli_alert_warning('Standardized Solutions')
     if (length(latent) > 0) {
         cli::cli_h3('Latent Variables:')
         cat(strrep(' ', padding + 4))
@@ -350,10 +393,10 @@ fit <- function(object) {
 
     # Obtain bayesian fit
     # Takes awhile
-    bfit <- blavaan::blavFitIndices(
+    bfit <- suppressWarnings(blavaan::blavFitIndices(
         object$bayes, baseline.model = attr(object, 'b_base'),
         fit.measures = c('BRMSEA', 'BCFI')
-    )
+    ))
 
     # Return output
     structure(
@@ -380,7 +423,10 @@ fit <- function(object) {
                 NA
 
             } else {
-                apply(object$info$fit_list[[1]], 2, quantile, probs = seq(0.1, 0.9, by = 0.1))
+                apply(
+                    object$info$fit_list[[1]], 2, quantile,
+                    probs = seq(0.1, 0.9, by = 0.1), na.rm = TRUE
+                )
             }
         ),
         class = 'cosme_mfit'

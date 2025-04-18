@@ -9,11 +9,11 @@ cosme(model, data, info = FALSE, option)
 \arguments{
 \item{model}{a \code{cosme_model} object}
 
-\item{data}{a \code{data.frame}}
+\item{data}{a \code{\link{data.frame}}}
 
-\item{info}{a \link[base:logical]{base::logical} If \code{TRUE} then fit information theory}
+\item{info}{a \link{logical} If \code{TRUE} then fit information theory}
 
-\item{option}{a \code{list} object with options passed to various methods. See details}
+\item{option}{a \code{\link{list}} object with options passed to various methods. See details}
 }
 \description{
 A short description...

@@ -4,10 +4,12 @@
 \alias{print.cosme_est}
 \title{Print Estimates from \code{comse_est}}
 \usage{
-\method{print}{cosme_est}(x, ..., nd = 3L)
+\method{print}{cosme_est}(x, ..., info = FALSE, nd = 3L)
 }
 \arguments{
 \item{...}{Further arguments passed to or from other methods}
+
+\item{info}{Logical. Include printing of Information Theory results}
 
 \item{nd}{Number of decimal places to print (Defaults 3)}
 

@@ -2,9 +2,9 @@
 #' @description
 #' A short description...
 #'
-#' @param model a `cosme_model` object
-#' @param data a `data.frame` object
-#' @param ... passed to `lavaan::cfa`
+#' @param model a [`cosme_model`] object
+#' @param data a [`data.frame`] object
+#' @param ... passed to [`lavaan::cfa`]
 #' @importFrom lavaan cfa lavaan
 #' @noRd
 fit_freq <- function(model, data, ...) {
@@ -15,9 +15,9 @@ fit_freq <- function(model, data, ...) {
 #' @description
 #' A short description...
 #'
-#' @param model a `cosme_model` object
-#' @param data a `data.frame` object
-#' @param ... passed to `blavaan::bcfa`
+#' @param model a [`cosme_model`] object
+#' @param data a [`data.frame`] object
+#' @param ... passed to [`blavaan::bcfa`]
 #' @importFrom blavaan bcfa blavaan
 #' @noRd
 fit_bayes <- function(model, data, ...) {
@@ -28,16 +28,16 @@ fit_bayes <- function(model, data, ...) {
 #' @description
 #' A short description...
 #'
-#' @param model a `cosme_model` object
-#' @param data a `data.frame` object
+#' @param model a [`cosme_model`] object
+#' @param data a [`data.frame`] object
 #' @param reps number of replicated data sets
-#' @param ... passed to `lavaan::cfa`
+#' @param ... passed to [`lavaan::cfa`]
 # TODO better description of ...
 #' @noRd
 fit_info <- function(model, data, reps, ...) {
     # TODO print warning with missing data
     # TODO deal with reps
-    if (missing(reps)) reps <- 25
+    if (missing(reps)) reps <- 10000
     tmpmat <- diag(NCOL(data))
     colnames(tmpmat) <- rownames(tmpmat) <- names(data)
 

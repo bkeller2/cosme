@@ -5,6 +5,18 @@ throw_error <- function(message, ..., .envir = parent.frame(), .frame = .envir) 
     cli::cli_abort(message, ..., .envir = .envir, .frame = .frame, call = NULL)
 }
 
+#' Internal function for producing Monte Carlo HPD Intervals
+#' @noRd
+emp_hpd <- function (theta) {
+    alpha <- 0.95
+    alpha <- min(alpha, 1 - alpha)
+    n <- length(theta)
+    L.start <- round(n * alpha)
+    theta <- sort(theta)
+    e <- theta[(n - L.start + 1):n] - theta[1:L.start]
+    ind <- which(e == min(e))[1]
+    return(c(`hpd 2.5%` = theta[ind], `hpd 97.5%` = theta[n - L.start + ind]))
+}
 
 #' Internal function for producing average estimates
 #' @noRd
