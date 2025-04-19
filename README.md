@@ -34,9 +34,6 @@ o <- cosme(
     info = TRUE  # Setting to TRUE for Info
 )
 
-# Obtain pre-run data
-# o <- readRDS('hs-run.rds')
-
 ## There will be 3 slots in `o`
 # - `info`  information theory results
 # - `freq`  frequentist results
