@@ -27,13 +27,11 @@ m <- c(
     "speed   =~ x7 + x8 + x9"
 )
 
-## Runs 5000 reps for Information Theory
+## Runs 10000 reps for Information Theory
 o <- cosme(
     m,           # Model Specified
     HSdata,      # Data Set
-    info = TRUE, # Seting to TRUE for Info
-    # Number of replications for Info
-    option = list(info =  list(reps = 5000))
+    info = TRUE  # Setting to TRUE for Info
 )
 
 # Obtain pre-run data
@@ -45,8 +43,9 @@ o <- cosme(
 # - `bayes` bayesian results
 
 ## Print out summaries
-estimates(o)    # Estimates
-fit(o)          # Fit statistics
+estimates(o)                # Estimates
+estimates(o, std = TRUE)    # Standardized Estimates
+fit(o)                      # Fit statistics
 ```
 
 ## Bug Reporting and Feature Request
