@@ -2,9 +2,12 @@
 An R Package for CoSME project
 
 
-## Currently under development
+## Install package via GitHub
 
-This package is currently under development and has not been released yet.
+```r
+install.packages('remotes')
+remotes::install_github('bkeller2/cosme')
+```
 
 ## Example script
 ```r
