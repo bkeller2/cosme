@@ -11,9 +11,6 @@ remotes::install_github('bkeller2/cosme')
 
 ## Example script
 ```r
-## Install package from github
-# remotes::install_github('bkeller2/cosme')
-
 ## Load Package
 library(cosme)
 
